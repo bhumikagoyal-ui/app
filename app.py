@@ -14,6 +14,7 @@ st.set_page_config(page_title="Online Store", layout="centered")
 
 # ----------------- HELPER FUNCTIONS -----------------
 def create_user(username, password, role="user"):
+    """Create a new user with hashed password."""
     if users_col.find_one({"username": username}):
         return False
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -21,18 +22,21 @@ def create_user(username, password, role="user"):
     return True
 
 def authenticate(username, password):
+    """Authenticate user credentials."""
     user = users_col.find_one({"username": username})
     if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
         return user
     return None
 
 def add_product(name, price):
+    """Add a new product."""
     if products_col.find_one({"name": name}):
         return False
     products_col.insert_one({"name": name, "price": price})
     return True
 
 def get_products():
+    """Fetch all products."""
     return list(products_col.find({}, {"_id": 0}))
 
 # ----------------- LOGIN PAGE -----------------
@@ -48,16 +52,16 @@ def login_page():
         if user:
             if login_choice.lower() == user["role"]:
                 st.session_state["user"] = user
-                st.success(f"Logged in as {user['role']}")
+                st.success(f"✅ Logged in as {user['role']}")
                 st.rerun()
             else:
-                st.error(f"Invalid role for {username}")
+                st.error("You selected the wrong role.")
         else:
-            st.error("Invalid credentials")
+            st.error("Invalid username or password.")
 
 # ----------------- ADMIN DASHBOARD -----------------
 def admin_dashboard():
-    st.title("👨‍💼 Admin Dashboard")
+    st.title("👩‍💼 Admin Dashboard")
 
     st.subheader("Create New User")
     new_user = st.text_input("Enter new username")
@@ -70,14 +74,14 @@ def admin_dashboard():
 
     st.subheader("Add Product")
     product_name = st.text_input("Product name")
-    product_price = st.number_input("Product price", min_value=0.0, step=0.01)
+    product_price = st.number_input("Product price ($)", min_value=0.0, step=0.01)
     if st.button("Add Product"):
         if add_product(product_name, product_price):
             st.success(f"Product '{product_name}' added successfully.")
         else:
             st.warning("Product already exists.")
 
-    st.subheader("Current Product List")
+    st.subheader("📦 Product List")
     products = get_products()
     if products:
         st.table(products)
@@ -97,7 +101,6 @@ def user_dashboard():
         st.info("No products available yet.")
         return
 
-    cart = []
     for prod in products:
         col1, col2, col3 = st.columns([3, 1, 1])
         with col1:
@@ -111,7 +114,7 @@ def user_dashboard():
                 st.session_state["cart"].append(prod)
                 st.success(f"Added {prod['name']} to cart.")
 
-    if "cart" in st.session_state and len(st.session_state["cart"]) > 0:
+    if "cart" in st.session_state and st.session_state["cart"]:
         st.subheader("🛍️ Your Cart")
         total = sum(item["price"] for item in st.session_state["cart"])
         for item in st.session_state["cart"]:
@@ -138,7 +141,8 @@ def main():
             user_dashboard()
 
 if __name__ == "__main__":
-    # Create a default admin account if not exists
-    if not users_col.find_one({"role": "admin"}):
-        create_user("admin", "admin123", role="admin")
+    # Create the admin account if it doesn't exist
+    if not users_col.find_one({"username": "bhumika", "role": "admin"}):
+        create_user("bhumika", "bhumika01", role="admin")
+        print("✅ Admin account created: username='bhumika', password='bhumika01'")
     main()
